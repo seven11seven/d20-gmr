@@ -36,7 +36,7 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--robot",
-        choices=["unitree_g1", "unitree_g1_with_hands", "booster_t1", "stanford_toddy", "fourier_n1", "engineai_pm01", "pal_talos"],
+        choices=["unitree_g1", "unitree_g1_with_hands", "booster_t1", "stanford_toddy", "fourier_n1", "engineai_pm01", "pal_talos", "d20_v2"],
         default="unitree_g1",
     )
     
@@ -70,7 +70,14 @@ if __name__ == "__main__":
         default=30,
         type=int,
     )
-    
+
+    parser.add_argument(
+        "--debug_frame",
+        default=-1,
+        type=int,
+        help="Pause the visualization at this frame index for parameter tuning. -1 disables.",
+    )
+
     args = parser.parse_args()
     
     if args.save_path is not None:
@@ -95,7 +102,7 @@ if __name__ == "__main__":
     
     robot_motion_viewer = RobotMotionViewer(robot_type=args.robot,
                                             motion_fps=motion_fps,
-                                            transparent_robot=0,
+                                            transparent_robot=1,
                                             record_video=args.record_video,
                                             video_path=args.video_path,
                                             # video_width=2080,
@@ -148,6 +155,12 @@ if __name__ == "__main__":
             follow_camera=True,
             # human_pos_offset=np.array([0.0, 0.0, 0.0])
         )
+
+        # Debug pause: freeze at the specified frame for parameter tuning
+        if i == args.debug_frame:
+            print(f"\n[DEBUG] Paused at frame {i}. Press Enter to resume.")
+            input()
+            print(f"[DEBUG] Resuming from frame {i}.")
 
         if args.loop:
             i = (i + 1) % len(lafan1_data_frames)

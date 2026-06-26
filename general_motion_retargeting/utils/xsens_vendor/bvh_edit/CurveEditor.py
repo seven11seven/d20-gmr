@@ -72,7 +72,7 @@ class OffsetManager:
         path = path or self.default_path
         if os.path.exists(path):
             try:
-                with open(path, "r") as f:
+                with open(path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 return data
             except (json.JSONDecodeError, IOError) as e:

@@ -8,7 +8,7 @@ from general_motion_retargeting.utils.xsens_vendor.bvh_edit.CurveEditor import (
 
 def bvh_parse(args):
     parser = BVHParser(axis_order="zxy", scale=args.scale)
-    with open(args.bvh_file, "r") as f:
+    with open(args.bvh_file, "r", encoding="utf-8") as f:
         bvh_text = f.read()
     rotations, positions = parser.parse(
         bvh_text, start=args.start, end=args.end, reset_to_zero=args.reset_to_zero

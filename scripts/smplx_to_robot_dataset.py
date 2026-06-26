@@ -198,7 +198,7 @@ def main():
                           hard_motions_folder / "1.txt"]
     hard_motions = []
     for hard_motions_path in hard_motions_paths:
-        with open(hard_motions_path, "r") as f:
+        with open(hard_motions_path, "r", encoding="utf-8") as f:
             for line in f:
                 if "Motion:" in line:
                     motion_path = line.split(":")[1].strip()

@@ -208,7 +208,7 @@ if __name__ == "__main__":
     xml_file_name = "human_skeleton.xml"
     scale = args.scale
     parser = BVHParser("zxy", args.scale)
-    with open(args.bvh_file, "r") as f:
+    with open(args.bvh_file, "r", encoding="utf-8") as f:
         bvh_text = f.read()
         rotations, positions = parser.parse(
             bvh_text, start=args.start, end=args.end, reset_to_zero=args.reset_to_zero

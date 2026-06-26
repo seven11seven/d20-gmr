@@ -291,7 +291,7 @@ class XRobotRecorder:
         if not os.path.exists(self.txt_path):
             raise FileNotFoundError(f"Tracking data file not found: {self.txt_path}")
         
-        with open(self.txt_path, 'r') as f:
+        with open(self.txt_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
         
         # First line contains camera parameters and initial timestamp
