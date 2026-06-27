@@ -93,45 +93,77 @@ class RobotMotionViewer:
             # Initialize renderer for video recording
             self.renderer = mj.Renderer(self.model, height=video_height, width=video_width)
         
-    def step(self, 
+    def step(self,
             # robot data
-            root_pos, root_rot, dof_pos, 
+            root_pos, root_rot, dof_pos,
             # human data
-            human_motion_data=None, 
+            human_motion_data=None,
             show_human_body_name=False,
             # scale for human point visualization
             human_point_scale=0.1,
-            # human pos offset add for visualization    
+            # human pos offset add for visualization
             human_pos_offset=np.array([0.0, 0.0, 0]),
+            # skeleton stick-figure lines: list of (parent_name, child_name) pairs
+            human_body_connections=None,
+            # line color / width for skeleton connections
+            skeleton_line_color=None,
+            skeleton_line_width=0.004,
             # rate limit
-            rate_limit=True, 
+            rate_limit=True,
             follow_camera=True,
             ):
         """
         by default visualize robot motion.
         also support visualize human motion by providing human_motion_data, to compare with robot motion.
-        
+
         human_motion_data is a dict of {"human body name": (3d global translation, 3d global rotation)}.
 
         if rate_limit is True, the motion will be visualized at the same rate as the motion data.
         else, the motion will be visualized as fast as possible.
         """
-        
+
         self.data.qpos[:3] = root_pos
         self.data.qpos[3:7] = root_rot # quat need to be scalar first! for mujoco
         self.data.qpos[7:] = dof_pos
-        
+
         mj.mj_forward(self.model, self.data)
-        
+
         if follow_camera:
             self.viewer.cam.lookat = self.data.xpos[self.model.body(self.robot_base).id]
             self.viewer.cam.distance = self.viewer_cam_distance
             self.viewer.cam.elevation = -10  # 正面视角，轻微向下看
             # self.viewer.cam.azimuth = 180    # 正面朝向机器人
-        
+
         if human_motion_data is not None:
             # Clean custom geometry
             self.viewer.user_scn.ngeom = 0
+
+            # Draw skeleton stick-figure lines (behind coordinate frames)
+            if human_body_connections is not None:
+                line_rgba = skeleton_line_color if skeleton_line_color is not None \
+                    else [0.3, 0.7, 1.0, 0.6]  # semi-transparent light blue
+                for parent_name, child_name in human_body_connections:
+                    if parent_name in human_motion_data and child_name in human_motion_data:
+                        parent_pos = human_motion_data[parent_name][0] + human_pos_offset
+                        child_pos = human_motion_data[child_name][0] + human_pos_offset
+                        geom = self.viewer.user_scn.geoms[self.viewer.user_scn.ngeom]
+                        mj.mjv_initGeom(
+                            geom,
+                            type=mj.mjtGeom.mjGEOM_CAPSULE,
+                            size=[skeleton_line_width, 0, 0],
+                            pos=[0, 0, 0],
+                            mat=np.eye(3).flatten(),
+                            rgba=line_rgba,
+                        )
+                        mj.mjv_connector(
+                            self.viewer.user_scn.geoms[self.viewer.user_scn.ngeom],
+                            type=mj.mjtGeom.mjGEOM_CAPSULE,
+                            width=skeleton_line_width,
+                            from_=parent_pos,
+                            to=child_pos,
+                        )
+                        self.viewer.user_scn.ngeom += 1
+
             # Draw the task targets for reference
             for human_body_name, (pos, rot) in human_motion_data.items():
                 draw_frame(
