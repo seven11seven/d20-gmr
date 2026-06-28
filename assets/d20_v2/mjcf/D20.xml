@@ -120,6 +120,8 @@
               <!-- <geom name="head_collision" type="mesh" mesh="head_link" class="collision_geom"/> -->
             </body>
             
+            <site name="left_collar" size="0.01" pos="0 0.151 0.250"/>
+            
             <body name="left_shoulder_pitch_link" pos="0 0.151 0.294">
               <inertial pos="0.0051019 0.069303 0.00099975" quat="0.572752 0.460002 -0.519017 0.437008" mass="1.2306" diaginertia="0.00202656 0.00188035 0.00155718"/>
               <joint name="left_shoulder_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.86 2.86" class="60A_joint_param"/>

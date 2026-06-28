@@ -85,8 +85,9 @@ class GeneralMotionRetargeting:
         self.solver = solver
         self.damping = damping
 
-        self.human_body_to_task1 = {}
-        self.human_body_to_task2 = {}
+        from collections import defaultdict
+        self.human_body_to_task1 = defaultdict(list)  # body_name → [task, ...]
+        self.human_body_to_task2 = defaultdict(list)
         self.pos_offsets1 = {}
         self.rot_offsets1 = {}
         self.pos_offsets2 = {}
@@ -120,14 +121,25 @@ class GeneralMotionRetargeting:
                     orientation_cost=rot_weight,
                     lm_damping=1,
                 )
-                self.human_body_to_task1[body_name] = task
-                self.pos_offsets1[body_name] = np.array(pos_offset) - self.ground
-                self.rot_offsets1[body_name] = R.from_quat(
-                    rot_offset, scalar_first=True
-                )
+                # Allow multiple robot links to target the same human bone
+                self.human_body_to_task1[body_name].append(task)
+                # Offsets should be consistent per human bone; warn on mismatch
+                new_pos = np.array(pos_offset) - self.ground
+                new_rot = R.from_quat(rot_offset, scalar_first=True)
+                if body_name in self.pos_offsets1:
+                    if not np.allclose(self.pos_offsets1[body_name], new_pos):
+                        print(f"  [yellow]Warning:[/] '{body_name}' has mismatched "
+                              f"pos_offsets in ik_match_table1; using first seen.")
+                    if not np.allclose(self.rot_offsets1[body_name].as_quat(scalar_first=True),
+                                       new_rot.as_quat(scalar_first=True)):
+                        print(f"  [yellow]Warning:[/] '{body_name}' has mismatched "
+                              f"rot_offsets in ik_match_table1; using first seen.")
+                else:
+                    self.pos_offsets1[body_name] = new_pos
+                    self.rot_offsets1[body_name] = new_rot
                 self.tasks1.append(task)
                 self.task_errors1[task] = []
-        
+
         for frame_name, entry in self.ik_match_table2.items():
             body_name, pos_weight, rot_weight, pos_offset, rot_offset = entry
             if pos_weight != 0 or rot_weight != 0:
@@ -138,11 +150,21 @@ class GeneralMotionRetargeting:
                     orientation_cost=rot_weight,
                     lm_damping=1,
                 )
-                self.human_body_to_task2[body_name] = task
-                self.pos_offsets2[body_name] = np.array(pos_offset) - self.ground
-                self.rot_offsets2[body_name] = R.from_quat(
-                    rot_offset, scalar_first=True
-                )
+                # Allow multiple robot links to target the same human bone
+                self.human_body_to_task2[body_name].append(task)
+                new_pos = np.array(pos_offset) - self.ground
+                new_rot = R.from_quat(rot_offset, scalar_first=True)
+                if body_name in self.pos_offsets2:
+                    if not np.allclose(self.pos_offsets2[body_name], new_pos):
+                        print(f"  [yellow]Warning:[/] '{body_name}' has mismatched "
+                              f"pos_offsets in ik_match_table2; using first seen.")
+                    if not np.allclose(self.rot_offsets2[body_name].as_quat(scalar_first=True),
+                                       new_rot.as_quat(scalar_first=True)):
+                        print(f"  [yellow]Warning:[/] '{body_name}' has mismatched "
+                              f"rot_offsets in ik_match_table2; using first seen.")
+                else:
+                    self.pos_offsets2[body_name] = new_pos
+                    self.rot_offsets2[body_name] = new_rot
                 self.tasks2.append(task)
                 self.task_errors2[task] = []
 
@@ -158,16 +180,16 @@ class GeneralMotionRetargeting:
         self.scaled_human_data = human_data
 
         if self.use_ik_match_table1:
-            for body_name in self.human_body_to_task1.keys():
-                task = self.human_body_to_task1[body_name]
+            for body_name, task_list in self.human_body_to_task1.items():
                 pos, rot = human_data[body_name]
-                task.set_target(mink.SE3.from_rotation_and_translation(mink.SO3(rot), pos))
-        
+                for task in task_list:
+                    task.set_target(mink.SE3.from_rotation_and_translation(mink.SO3(rot), pos))
+
         if self.use_ik_match_table2:
-            for body_name in self.human_body_to_task2.keys():
-                task = self.human_body_to_task2[body_name]
+            for body_name, task_list in self.human_body_to_task2.items():
                 pos, rot = human_data[body_name]
-                task.set_target(mink.SE3.from_rotation_and_translation(mink.SO3(rot), pos))
+                for task in task_list:
+                    task.set_target(mink.SE3.from_rotation_and_translation(mink.SO3(rot), pos))
             
             
     def retarget(self, human_data, offset_to_ground=False):

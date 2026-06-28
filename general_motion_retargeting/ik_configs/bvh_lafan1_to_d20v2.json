@@ -17,6 +17,7 @@
 
         "Spine2": 1.1,
 
+        "LeftShoulder": 1.1,
         "LeftArm": 1.1,
         "RightArm": 1.1,
         "LeftForeArm": 1.1,
@@ -33,6 +34,12 @@
             [0.5, 0.5, 0.5, 0.5]
         ],
 
+        "left_hip_pitch_link": [
+            "LeftUpLeg",
+            10, 0,
+            [0.0, 0.0, 0.0],
+            [-0.5, 0.5, 0.5, -0.5]
+        ],
         "left_hip_yaw_link": [
             "LeftUpLeg",
             0, 10,
@@ -52,6 +59,12 @@
             [-0.70710678, 0.70710678, 0.0, 0.0]
         ],
         
+        "right_hip_pitch_link": [
+            "RightUpLeg",
+            10, 0,
+            [0.0, 0.0, 0.0],
+            [-0.5, 0.5, 0.5, -0.5]
+        ],
         "right_hip_yaw_link": [
             "RightUpLeg",
             0, 10,
@@ -78,6 +91,12 @@
             [0.5, 0.5, 0.5, 0.5]
         ],
 
+        "left_collar": [
+            "LeftShoulder",
+            0, 1,
+            [0.0, 0.0, 0.0],
+            [0.5, 0.5, -0.5, -0.5]
+        ],
         "left_shoulder_yaw_link": [
             "LeftArm",
             30, 10,
