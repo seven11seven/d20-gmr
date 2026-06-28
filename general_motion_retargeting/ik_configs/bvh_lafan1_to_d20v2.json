@@ -14,10 +14,17 @@
         "RightLeg": 1.1,
         "LeftFootMod": 1.1,
         "RightFootMod": 1.1,
+        "LeftToe": 1.1,
+        "RightToe": 1.1,
 
+        "Spine": 1.1,
+        "Spine1": 1.1,
         "Spine2": 1.1,
+        "Neck": 1.1,
+        "Head": 1.1,
 
         "LeftShoulder": 1.1,
+        "RightShoulder": 1.1,
         "LeftArm": 1.1,
         "RightArm": 1.1,
         "LeftForeArm": 1.1,
@@ -58,6 +65,12 @@
             [0.0, 0.0, 0.0],
             [-0.70710678, 0.70710678, 0.0, 0.0]
         ],
+        "left_toe_link": [
+            "LeftToe",
+            1, 0,
+            [0.0, 0.0, 0.0],
+            [-0.70710678, 0.70710678, 0.0, 0.0]
+        ],
         
         "right_hip_pitch_link": [
             "RightUpLeg",
@@ -80,6 +93,12 @@
         "right_ankle_roll_link": [
             "RightFootMod",
             80, 10,
+            [0.0, 0.0, 0.0],
+            [-0.70710678, 0.70710678, 0.0, 0.0]
+        ],
+        "right_toe_link": [
+            "RightToe",
+            1, 0,
             [0.0, 0.0, 0.0],
             [-0.70710678, 0.70710678, 0.0, 0.0]
         ],
@@ -115,7 +134,13 @@
             [0.0, 0.0, 0.0],
             [0.70710678, 0.70710678, 0.0, 0.0]
         ],
-
+        
+        "right_collar": [
+            "RightShoulder",
+            0, 1,
+            [0.0, 0.0, 0.0],
+            [0.5, 0.5, -0.5, -0.5]
+        ],
         "right_shoulder_yaw_link": [
             "RightArm",
             30, 10,

@@ -158,6 +158,8 @@
               </body>
             </body>
 
+            <site name="right_collar" size="0.01" pos="0 -0.151 0.250"/>
+
             <body name="right_shoulder_pitch_link" pos="0 -0.151 0.294">
               <inertial pos="0.0051071 -0.069305 0.0010059" quat="0.460247 0.572241 -0.438568 0.518045" mass="1.2306" diaginertia="0.00202681 0.00187963 0.00155737"/>
               <joint name="right_shoulder_pitch_joint" pos="0 0 0" axis="0 1 0" range="-2.86 2.86" class="60A_joint_param"/>
