@@ -2,13 +2,15 @@
 T-Pose Viewer: Visualize the scaled human skeleton alongside the robot in T-pose.
 
 1. Loads a BVH file to extract the skeleton definition (bone names, offsets, hierarchy)
-2. Computes the T-pose (rest pose) using identity quaternions and bone offsets
+2. Computes a human pose from the BVH hierarchy, using either a real BVH frame
+   or the raw zero-rotation rest pose
 3. Applies the scaling/offset pipeline from the IK config (same as retargeting pipeline)
 4. Displays both the scaled human skeleton (as coordinate-frame arrows) and
    the robot (in transparent mode) in a static MuJoCo viewer.
 
 Usage:
     python scripts/tpose_viewer.py --bvh_file data/lafan/dance1_subject2.bvh --robot d20_v2
+    python scripts/tpose_viewer.py --bvh_file data/lafan/dance1_subject2.bvh --robot d20_v2 --pose_source rest
 """
 
 import argparse
@@ -22,24 +24,42 @@ from general_motion_retargeting.utils.lafan_vendor import utils as lafan_utils
 from rich import print
 
 
-def create_tpose_from_anim(anim) -> tuple[dict, list]:
+def create_human_pose_from_anim(
+    anim,
+    *,
+    frame_idx: int = 0,
+    use_rest_pose: bool = False,
+    bvh_format: str = "lafan1",
+) -> tuple[dict, list]:
     """
-    Create a T-pose (rest pose) from a parsed BVH Anim object.
+    Create a human pose from a parsed BVH Anim object.
+
+    LaFan's zero-rotation OFFSET pose is not an anatomical standing T-pose:
+    many limbs extend along the BVH X axis. For visual debugging, a real BVH
+    frame is usually the least surprising source because the joint names,
+    rotations, and FK positions all come from the same pose.
 
     Returns:
         human_data: dict mapping bone names → [3D position, quaternion (scalar-first)]
         connections: list of (parent_name, child_name) tuples for skeleton links
     """
-    # Identity quaternions = no joint rotation → rest pose
-    identity_quats = np.tile(
-        np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32),
-        (1, len(anim.bones), 1),
-    )
+    if use_rest_pose:
+        local_quats = np.tile(
+            np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32),
+            (1, len(anim.bones), 1),
+        )
+        local_pos = anim.offsets[np.newaxis, :, :].copy()
+    else:
+        if frame_idx < 0 or frame_idx >= anim.pos.shape[0]:
+            raise ValueError(
+                f"frame_idx {frame_idx} is out of range for BVH with "
+                f"{anim.pos.shape[0]} frames"
+            )
+        local_quats = anim.quats[frame_idx:frame_idx + 1]
+        local_pos = anim.pos[frame_idx:frame_idx + 1]
 
-    # Use bone offsets as local positions for forward kinematics.
-    local_pos = anim.offsets[np.newaxis, :, :].copy()
     global_quats, global_positions = lafan_utils.quat_fk(
-        identity_quats, local_pos, anim.parents
+        local_quats, local_pos, anim.parents
     )
 
     # Apply the same coordinate transform used by load_bvh_file():
@@ -53,9 +73,19 @@ def create_tpose_from_anim(anim) -> tuple[dict, list]:
         position = global_positions[0, i] @ rotation_matrix.T / 100.0  # cm → m
         result[bone] = [position, orientation]
 
-    # Add synthetic foot bones required by the IK config
-    result["LeftFootMod"] = [result["LeftFoot"][0], result["LeftToe"][1]]
-    result["RightFootMod"] = [result["RightFoot"][0], result["RightToe"][1]]
+    if bvh_format == "lafan1":
+        left_toe_name = "LeftToe"
+        right_toe_name = "RightToe"
+    elif bvh_format == "nokov":
+        left_toe_name = "LeftToeBase"
+        right_toe_name = "RightToeBase"
+    else:
+        raise ValueError(f"Invalid format: {bvh_format}")
+
+    # Add synthetic foot task bones required by the IK config. Their positions
+    # are foot/ankle positions, while their orientations follow the toe.
+    result["LeftFootMod"] = [result["LeftFoot"][0].copy(), result[left_toe_name][1]]
+    result["RightFootMod"] = [result["RightFoot"][0].copy(), result[right_toe_name][1]]
 
     # Build parent→child connections from the BVH hierarchy
     connections = []
@@ -63,20 +93,6 @@ def create_tpose_from_anim(anim) -> tuple[dict, list]:
         parent_idx = anim.parents[i]
         if parent_idx >= 0:
             connections.append((anim.bones[parent_idx], bone))
-
-    # Replace foot chain endings: LeftLeg→LeftFootMod (skip LeftToe/RightToe)
-    connections = [
-        (p, c) for (p, c) in connections
-        if c not in ("LeftToe", "RightToe")
-    ]
-    connections = [
-        (p, "LeftFootMod") if c == "LeftFoot" else (p, c)
-        for (p, c) in connections
-    ]
-    connections = [
-        (p, "RightFootMod") if c == "RightFoot" else (p, c)
-        for (p, c) in connections
-    ]
 
     return result, connections
 
@@ -101,58 +117,66 @@ def scale_all_bones(
     anim_bones: list,
 ) -> dict:
     """
-    Scale all bones including intermediate ones not in the scale table.
+    Scale human data exactly like GeneralMotionRetargeting.scale_human_data().
 
-    Bones in the scale table use their explicit scale factor.
-    Intermediate bones inherit the scale factor from their nearest
-    scaled ancestor in the BVH hierarchy.
+    Only bones listed in the IK config's human_scale_table are preserved.
+    Positions are scaled in the root-local frame and transformed back to global.
+    anim_parents and anim_bones are accepted for API compatibility with older
+    viewer code, but the retargeting scale path does not use hierarchy.
     """
-    # Build parent index lookup
-    bone_to_idx = {b: i for i, b in enumerate(anim_bones)}
+    _ = anim_parents, anim_bones
 
-    # Synthetic bones inherit scale from their source
-    _synthetic_sources = {"LeftFootMod": "LeftFoot", "RightFootMod": "RightFoot"}
-
-    # Determine effective scale for every bone via ancestor inheritance
-    effective_scale = {}
-    for bone in anim_bones:
-        if bone in human_scale_table:
-            effective_scale[bone] = human_scale_table[bone]
-        else:
-            # Walk up the hierarchy to find nearest scaled ancestor
-            current = bone
-            while current not in human_scale_table:
-                idx = bone_to_idx.get(current)
-                if idx is None or anim_parents[idx] < 0:
-                    effective_scale[bone] = 1.0
-                    break
-                current = anim_bones[anim_parents[idx]]
-            else:
-                effective_scale[bone] = human_scale_table[current]
-
-    # Handle synthetic bones not in the BVH hierarchy
-    for bone in human_data:
-        if bone not in effective_scale:
-            eff = 1.0
-            if bone in _synthetic_sources:
-                src = _synthetic_sources[bone]
-                eff = effective_scale.get(src, 1.0)
-            effective_scale[bone] = eff
-
-    # Scale all bones relative to root
+    human_data_local = {}
     root_pos, root_quat = human_data[human_root_name]
-    scaled_root_pos = effective_scale[human_root_name] * root_pos
+
+    scaled_root_pos = human_scale_table[human_root_name] * root_pos
+
+    for body_name in human_data.keys():
+        if body_name not in human_scale_table:
+            continue
+        if body_name == human_root_name:
+            continue
+        human_data_local[body_name] = (
+            human_data[body_name][0] - root_pos
+        ) * human_scale_table[body_name]
 
     result = {human_root_name: (scaled_root_pos, root_quat)}
-    for bone in human_data:
-        if bone == human_root_name:
-            continue
-        pos, quat = human_data[bone]
-        offset = pos - root_pos
-        scaled_pos = scaled_root_pos + offset * effective_scale[bone]
-        result[bone] = [scaled_pos, quat]
+    for body_name in human_data_local.keys():
+        result[body_name] = (
+            human_data_local[body_name] + scaled_root_pos,
+            human_data[body_name][1],
+        )
 
     return result
+
+
+def filter_skeleton_connections(connections: list, human_data: dict) -> list:
+    """Keep only visible links whose endpoints survived retargeting-scale filtering."""
+    visible_connections = [
+        (parent_name, child_name)
+        for parent_name, child_name in connections
+        if parent_name in human_data and child_name in human_data
+    ]
+
+    # The retargeting scale path intentionally drops BVH Foot joints because the
+    # IK config uses FootMod task bones instead. Add display links that preserve
+    # the visible lower-leg and foot-arch structure after that filtering.
+    foot_links = [
+        ("LeftLeg", "LeftFootMod"),
+        ("LeftFootMod", "LeftToe"),
+        ("RightLeg", "RightFootMod"),
+        ("RightFootMod", "RightToe"),
+    ]
+    for parent_name, child_name in foot_links:
+        link = (parent_name, child_name)
+        if (
+            parent_name in human_data
+            and child_name in human_data
+            and link not in visible_connections
+        ):
+            visible_connections.append(link)
+
+    return visible_connections
 
 
 if __name__ == "__main__":
@@ -188,6 +212,21 @@ if __name__ == "__main__":
         help="Root (Hips / base_link) Z position for both human and robot skeletons.",
     )
     parser.add_argument(
+        "--pose_source",
+        default="frame",
+        choices=["frame", "rest"],
+        help=(
+            "Human skeleton pose source. 'frame' uses a real BVH frame; "
+            "'rest' uses zero rotations plus BVH OFFSETs."
+        ),
+    )
+    parser.add_argument(
+        "--frame_idx",
+        type=int,
+        default=0,
+        help="BVH frame index used when --pose_source frame.",
+    )
+    parser.add_argument(
         "--human_offset_x",
         type=float,
         default=0.0,
@@ -218,8 +257,17 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     print(f"[bold]Loading BVH skeleton from:[/] {args.bvh_file}")
     anim = read_bvh(args.bvh_file)
-    human_data_full, skeleton_connections = create_tpose_from_anim(anim)
+    human_data_full, skeleton_connections = create_human_pose_from_anim(
+        anim,
+        frame_idx=args.frame_idx,
+        use_rest_pose=args.pose_source == "rest",
+        bvh_format=args.format,
+    )
     print(f"  Extracted {len(human_data_full)} body parts, {len(skeleton_connections)} links")
+    if args.pose_source == "frame":
+        print(f"  Human pose source: BVH frame {args.frame_idx}")
+    else:
+        print("  Human pose source: BVH rest pose (zero joint rotations)")
 
     # ------------------------------------------------------------------
     # 2. Initialize GMR to load robot model and IK config
@@ -238,13 +286,16 @@ if __name__ == "__main__":
     #   - joint_offsets_deg:  dict of {joint_name: offset_degrees}
     #     joint names are the MuJoCo DoF names (see printed list at init)
     # ------------------------------------------------------------------
-    robot_root_rpy_deg = [0.0, -90.0, 0.0]  # roll, pitch, yaw in degrees
+    robot_root_rpy_deg = [0.0, 0.0, -90.0]  # roll, pitch, yaw in degrees
 
     robot_joint_offsets_deg = {
         # Examples (uncomment to activate):
         # "left_shoulder_pitch_joint":  30.0,   # raise left arm  30°
         # "right_shoulder_pitch_joint": 30.0,   # raise right arm 30°
         # "left_shoulder_yaw_joint":   -60.0,   # swing left arm  out
+        
+        "left_shoulder_roll_joint":   90.0,   # swing left arm  out
+        "right_shoulder_roll_joint": -90.0,   # swing left arm  out
         
         "left_elbow_pitch_joint":    90.0,   # swing left arm  out
         "right_elbow_pitch_joint":   90.0,   # swing left arm  out
@@ -300,6 +351,12 @@ if __name__ == "__main__":
         anim.parents,
         anim.bones,
     )
+    skeleton_connections = filter_skeleton_connections(
+        skeleton_connections,
+        human_data_full,
+    )
+    print(f"  Visible scaled body parts: {len(human_data_full)}")
+    print(f"  Visible skeleton links after IK scale filtering: {len(skeleton_connections)}")
 
     # Apply IK pos/rot offsets only to config-mapped bones
     config_bone_names = set(retargeter.human_scale_table.keys())
@@ -338,7 +395,7 @@ if __name__ == "__main__":
         float(robot_qpos[1]),
         float(robot_qpos[2]),
     ]
-    step_size = [0.05]  # mutable, toggled by number keys
+    step_size = [0.01]  # mutable, toggled by number keys
 
     print(f"  Robot DOF count: {retargeter.model.nv}")
     print(f"  Robot root pos: X={robot_root[0]:.3f} Y={robot_root[1]:.3f} Z={robot_root[2]:.3f}")
@@ -347,41 +404,37 @@ if __name__ == "__main__":
     # 5. Keyboard callback for interactive robot positioning
     # ------------------------------------------------------------------
     # GLFW key codes
-    KEY_W = 87
-    KEY_A = 65
-    KEY_S = 83
-    KEY_D = 68
-    KEY_Q = 81
-    KEY_E = 69
     KEY_R = 82
     KEY_1 = 49
     KEY_2 = 50
     KEY_3 = 51
     KEY_UP = 265
-    KEY_DOWN = 266
+    KEY_DOWN = 264
     KEY_LEFT = 263
     KEY_RIGHT = 262
+    KEY_KP_2 = 322
+    KEY_KP_8 = 328
 
     def make_keyboard_callback(robot_root, step_size, root_height):
         def on_key(keycode: int) -> None:
             step = step_size[0]
 
             # ---- X axis (forward / backward) ----
-            if keycode == KEY_W or keycode == KEY_UP:
+            if keycode == KEY_UP:
                 robot_root[0] += step
-            elif keycode == KEY_S or keycode == KEY_DOWN:
+            elif keycode == KEY_DOWN:
                 robot_root[0] -= step
 
             # ---- Y axis (left / right) ----
-            elif keycode == KEY_A or keycode == KEY_LEFT:
+            elif keycode == KEY_LEFT:
                 robot_root[1] -= step
-            elif keycode == KEY_D or keycode == KEY_RIGHT:
+            elif keycode == KEY_RIGHT:
                 robot_root[1] += step
 
             # ---- Z axis (down / up) ----
-            elif keycode == KEY_Q:
+            elif keycode == KEY_KP_2:
                 robot_root[2] -= step
-            elif keycode == KEY_E:
+            elif keycode == KEY_KP_8:
                 robot_root[2] += step
 
             # ---- Reset position ----
@@ -416,13 +469,15 @@ if __name__ == "__main__":
     print(f"\n[bold green]Launching T-Pose Viewer[/]")
     print(f"  Robot:          {args.robot}  (transparent)")
     print(f"  Human:          {args.bvh_file}  (coordinate frames)")
+    print(f"  Pose source:    {args.pose_source}"
+          f"{f' frame {args.frame_idx}' if args.pose_source == 'frame' else ''}")
     print(f"  Root height:    {args.root_height} m  (shared)")
     print(f"  Human offset:   X={args.human_offset_x}, Y={args.human_offset_y}")
     print(f"")
     print(f"  [bold]Robot controls (focus the MuJoCo window):[/]")
-    print(f"    [cyan]W/S[/] or [cyan]↑/↓[/]   — move robot  forward / backward  (X axis)")
-    print(f"    [cyan]A/D[/] or [cyan]←/→[/]   — move robot  left / right       (Y axis)")
-    print(f"    [cyan]Q/E[/]           — move robot  down / up          (Z axis)")
+    print(f"    [cyan]↑/↓[/]           — move robot  forward / backward  (X axis)")
+    print(f"    [cyan]←/→[/]           — move robot  left / right       (Y axis)")
+    print(f"    [cyan]Numpad 2/8[/]    — move robot  down / up          (Z axis)")
     print(f"    [cyan]R[/]             — reset robot to (0, 0, {args.root_height})")
     print(f"    [cyan]1/2/3[/]         — step size: 0.01 / 0.05 / 0.10 m")
     print(f"")

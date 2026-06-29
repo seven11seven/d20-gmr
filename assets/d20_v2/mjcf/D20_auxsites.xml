@@ -90,17 +90,13 @@
       <geom name="base_visual" type="mesh" mesh="base_link" class="visual_geom"/>
       <!-- <geom name="base_collision" type="mesh" mesh="base_link" class="collision_geom"/> -->
       <site name="imu_in_pelvis" size="0.01" pos="0 0 0"/>
-      <body name="aux_base" pos="0 0 -0.055">
-        <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-      </body>
+      <site name="aux_base"  size="0.01" pos="0 0 -0.055"/>
 
       <body name="waist_yaw_link" pos="0 0 0.0425">
         <inertial pos="0.014761 0 0.033637" quat="0.501303 0.498745 0.498696 0.501249" mass="0.38339" diaginertia="0.000719 0.000684119 0.000328061"/>
         <joint name="waist_yaw_joint" pos="0 0 0" axis="0 0 1" range="-2.61 2.61"  class="85S_joint_param"/>
         <geom name="waist_yaw_visual" type="mesh" mesh="waist_yaw_link" class="visual_geom"/>
-        <body name="aux_spine" pos="0 0 0">
-          <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-        </body>
+        <site name="aux_spine" size="0.01" pos="0 0 0"/>
         
         <!-- <geom name="waist_yaw_collision" type="mesh" mesh="waist_yaw_link" class="collision_geom"/> -->
         <body name="waist_roll_link" pos="0 0 0.0615">
@@ -120,26 +116,18 @@
               <geom name="waist_imu_visual" type="mesh" mesh="waist_imu_link" class="visual_geom"/>
               <!-- <geom name="waist_imu_collision" type="mesh" mesh="waist_imu_link" class="collision_geom"/> -->
               <site name="imu_in_torso" size="0.01" pos="0 0 0"/>
-              <body name="aux_spine1" pos="0 0 -0.015">
-                <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-              </body>
-              <body name="aux_spine2" pos="0 0 0.115">
-                <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-              </body>
+              <site name="aux_spine1" size="0.01" pos="0 0 -0.015"/>
+              <site name="aux_spine2" size="0.01" pos="0 0 0.115"/>
             </body>
 
             <body name="head_link" pos="0 0 0.369">
               <inertial pos="0.012563 -3.72E-06 0.12186" mass="0.80391" fullinertia="0.0041827 0.0046841 0.0031874 -5E-08 0.00069273 3.5E-07"/>
               <geom name="head_visual" type="mesh" mesh="head_link" class="visual_geom"/>
               <!-- <geom name="head_collision" type="mesh" mesh="head_link" class="collision_geom"/> -->
-              <body name="aux_neck" pos="0 0 0">
-                <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-              </body>
+              <site name="aux_neck" size="0.01" pos="0 0 0"/>
             </body>
 
-            <body name="aux_left_collar" pos="0 0.061 0.365">
-              <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-            </body>
+            <site name="aux_left_collar" size="0.01" pos="0 0.061 0.365"/>
 
             <body name="left_shoulder_pitch_link" pos="0 0.151 0.294">
               <inertial pos="0.0051019 0.069303 0.00099975" quat="0.572752 0.460002 -0.519017 0.437008" mass="1.2306" diaginertia="0.00202656 0.00188035 0.00155718"/>
@@ -161,9 +149,7 @@
                     <joint name="left_elbow_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.87 1.83" class="60A_joint_param"/>
                     <geom name="left_elbow_pitch_visual" type="mesh" mesh="left_elbow_pitch_link" class="visual_geom"/>
                     <!-- <geom name="left_elbow_pitch_collision" type="mesh" mesh="left_elbow_pitch_link" class="collision_geom"/> -->
-                    <body name="aux_left_elbow" pos="0 -0.04 0">
-                      <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-                    </body>
+                    <site name="aux_left_elbow" size="0.01" pos="0 -0.04 0"/>
 
                     <body name="left_wrist_roll_link" pos="0.11311 -0.0421 -0.015">
                       <inertial pos="0.042234 -0.00036007 0.00014429" mass="0.46711" fullinertia="0.0003188 0.0010142 0.00099676 -3.09E-06 5.2E-07 -2.2E-07"/>
@@ -175,18 +161,13 @@
                         <geom name="left_hand_visual" type="mesh" mesh="left_hand_link" class="visual_geom"/>
                         <geom name="left_hand_collision" type="mesh" mesh="left_hand_link" class="collision_geom"/>
                       </body>
-                      <body name="aux_left_wrist" pos="0.12 0 0">
-                        <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-                      </body>
                     </body>
                   </body>
                 </body>
               </body>
             </body>
 
-            <body name="aux_right_collar" pos="0 -0.061 0.365">
-              <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-            </body>
+            <site name="aux_right_collar" size="0.01" pos="0 -0.061 0.365"/>
 
             <body name="right_shoulder_pitch_link" pos="0 -0.151 0.294">
               <inertial pos="0.0051071 -0.069305 0.0010059" quat="0.460247 0.572241 -0.438568 0.518045" mass="1.2306" diaginertia="0.00202681 0.00187963 0.00155737"/>
@@ -208,9 +189,7 @@
                     <joint name="right_elbow_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.87 1.83" class="60A_joint_param"/>
                     <geom name="right_elbow_pitch_visual" type="mesh" mesh="right_elbow_pitch_link" class="visual_geom"/>
                     <!-- <geom name="right_elbow_pitch_collision" type="mesh" mesh="right_elbow_pitch_link" class="collision_geom"/> -->
-                    <body name="aux_right_elbow" pos="0 0.04 0">
-                      <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-                    </body>
+                    <site name="aux_right_elbow" size="0.01" pos="0 0.04 0"/>
 
                     <body name="right_wrist_roll_link" pos="0.11311 0.0421 -0.015">
                       <inertial pos="0.0422 2.49E-05 2.579E-05" mass="0.46765" fullinertia="0.00031919 0.001015 0.00099871 2.63E-06 -2.1E-07 1.44E-07"/>
@@ -221,9 +200,6 @@
                         <inertial pos="0.068022 0.014061 0.010315" mass="0.35" fullinertia="0.000507 0.0010546 0.0011026 0.00013929 0.00010007 -0.00014913"/>
                         <geom name="right_hand_visual" type="mesh" mesh="right_hand_link" class="visual_geom"/>
                         <geom name="right_hand_collision" type="mesh" mesh="right_hand_link" class="collision_geom"/>
-                      </body>
-                      <body name="aux_right_wrist" pos="0.12 0 0">
-                        <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
                       </body>
                     </body>
                   </body>
@@ -261,9 +237,7 @@
               <inertial pos="0.0215718 -0.0636838 -0.186548" quat="0.67794 0.00860782 0.00811432 0.735022" mass="4.65741" diaginertia="0.0650497 0.0641499 0.0100515"/>
               <joint name="left_knee_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.139 2.42" class="85B_joint_param"/>
               <geom name="left_knee_pitch_visual" type="mesh" mesh="left_knee_pitch_link" class="visual_geom"/>            
-              <body name="aux_left_knee" pos="0 -0.06 0">
-                <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-              </body>
+              <site name="aux_left_knee" size="0.01" pos="0 -0.06 0"/>
 
               <!-- <geom name="left_knee_pitch_collision" type="mesh" mesh="left_knee_pitch_link" class="collision_geom"/> -->
               <body name="left_ankle_pitch_link" pos="0.03 -0.0629 -0.45">
@@ -321,9 +295,7 @@
               <joint name="right_knee_pitch_joint" pos="0 0 0" axis="0 1 0" range="-0.139 2.42" class="85B_joint_param"/>
               <geom name="right_knee_pitch_visual" type="mesh" mesh="right_knee_pitch_link" class="visual_geom"/>
               <!-- <geom name="right_knee_pitch_collision" type="mesh" mesh="right_knee_pitch_link" class="collision_geom"/> -->
-              <body name="aux_right_knee" pos="0 0.06 0">
-                <inertial pos="0 0 0" mass="0.000001" diaginertia="0.000000001 0.000000001 0.000000001"/>
-              </body>
+              <site name="aux_right_knee" size="0.01" pos="0 0.06 0"/>
 
               <body name="right_ankle_pitch_link" pos="0.03 0.0629 -0.45">
                 <inertial pos="0 0.00016177 0.00018439" quat="0.5 0.5 -0.5 0.5" mass="0.200643" diaginertia="6.025e-05 4.298e-05 2.793e-05"/>
