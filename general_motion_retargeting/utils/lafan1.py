@@ -17,7 +17,18 @@ def load_bvh_file(bvh_file, format="lafan1"):
     data = read_bvh(bvh_file)
     global_data = utils.quat_fk(data.quats, data.pos, data.parents)
 
-    rotation_matrix = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+    if format == "mocap58":
+        # mocap58 BVH coordinates are X-left, Y-up, Z-forward. The project
+        # world is X-forward, Y-left, Z-up, so positions become (Z, X, Y).
+        rotation_matrix = np.array([
+            [0, 0, 1],
+            [1, 0, 0],
+            [0, 1, 0],
+        ])
+        position_scale = 1.0
+    else:
+        rotation_matrix = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+        position_scale = 0.01
     rotation_quat = R.from_matrix(rotation_matrix).as_quat(scalar_first=True)
 
     frames = []
@@ -25,7 +36,7 @@ def load_bvh_file(bvh_file, format="lafan1"):
         result = {}
         for i, bone in enumerate(data.bones):
             orientation = utils.quat_mul(rotation_quat, global_data[0][frame, i])
-            position = global_data[1][frame, i] @ rotation_matrix.T / 100  # cm to m
+            position = global_data[1][frame, i] @ rotation_matrix.T * position_scale
             result[bone] = [position, orientation]
             
         if format == "lafan1":
@@ -35,6 +46,8 @@ def load_bvh_file(bvh_file, format="lafan1"):
         elif format == "nokov":
             result["LeftFootMod"] = [result["LeftFoot"][0], result["LeftToeBase"][1]]
             result["RightFootMod"] = [result["RightFoot"][0], result["RightToeBase"][1]]
+        elif format == "mocap58":
+            pass
         else:
             raise ValueError(f"Invalid format: {format}")
             
@@ -45,5 +58,4 @@ def load_bvh_file(bvh_file, format="lafan1"):
     human_height = 1.75  # cm to m
 
     return frames, human_height
-
 

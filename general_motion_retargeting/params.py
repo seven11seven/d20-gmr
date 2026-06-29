@@ -58,6 +58,9 @@ IK_CONFIG_DICT = {
         "pal_talos": IK_CONFIG_ROOT / "bvh_to_talos.json",
         "d20_v2": IK_CONFIG_ROOT / "bvh_lafan1_to_d20v2.json",
     },
+    "bvh_mocap58":{
+        "d20_v2": IK_CONFIG_ROOT / "bvh_mocap58_to_d20v2.json",
+    },
     "bvh_nokov":{
         "unitree_g1": IK_CONFIG_ROOT / "bvh_nokov_to_g1.json",
     },

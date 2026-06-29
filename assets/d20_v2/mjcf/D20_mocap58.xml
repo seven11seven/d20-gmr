@@ -47,7 +47,7 @@
 
   <asset>
     <mesh name="base_link" file="base_link.STL"/>
-assets/d20_v2/mjcf/D20_mocap58.xml
+
     <mesh name="waist_yaw_link" file="waist_yaw_link.STL"/>
     <mesh name="waist_roll_link" file="waist_roll_link.STL"/>
     <mesh name="waist_pitch_link" file="waist_pitch_link.STL"/>
