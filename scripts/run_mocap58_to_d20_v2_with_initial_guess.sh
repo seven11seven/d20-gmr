@@ -2,7 +2,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BVH_FILE="${1:-${REPO_ROOT}/data/mocap58/Xsens2/7.bvh}"
+BVH_FILE="${1:-${REPO_ROOT}/data/mocap58/Xsens1/4.bvh}"
+SAVE_PATH="${1:-${REPO_ROOT}/retargeting_data/d20_v2/Xsens/1_4.npz}"
 
 if [[ $# -gt 0 ]]; then
   shift
@@ -11,7 +12,8 @@ fi
 # Edit this block to tune the first-frame IK initial guess.
 # Root quaternion uses MuJoCo/GMR order: W X Y Z.
 INITIAL_ROOT_POS=(0.0 0.0 1.0)
-INITIAL_ROOT_QUAT=(0.5 0.5 0.5 0.5)
+INITIAL_ROOT_QUAT=(1.0 0.0 0.0 0.0)
+# INITIAL_ROOT_QUAT=(0.5 0.5 0.5 0.5)
 
 # Joint values are in degrees. Add/remove entries as needed.
 INITIAL_JOINTS=(
@@ -62,4 +64,6 @@ python scripts/bvh_to_robot.py \
   "${INITIAL_JOINT_ARGS[@]}" \
   --rate_limit \
   --debug_frame 4 \
+  --save_path "${SAVE_PATH}" \
+  --motion_fps 120 \
   "$@"

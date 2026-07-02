@@ -321,6 +321,15 @@ if __name__ == "__main__":
             "local_body_pos": local_body_pos,
             "link_body_list": body_names,
         }
+
+        # Drop the first 5 frames
+        motion_data["root_pos"] = motion_data["root_pos"][5:]
+        motion_data["root_rot"] = motion_data["root_rot"][5:]
+        motion_data["dof_pos"] = motion_data["dof_pos"][5:]
+        if local_body_pos:
+            motion_data["local_body_pos"] = motion_data["local_body_pos"][5:]
+            
+
         with open(args.save_path, "wb") as f:
             pickle.dump(motion_data, f)
         print(f"Saved to {args.save_path}")
